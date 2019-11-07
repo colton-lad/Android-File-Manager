@@ -2,21 +2,17 @@ package com.ccladner.filemanager;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.LinearLayoutCompat;
-import androidx.core.content.ContextCompat;
-import androidx.core.os.EnvironmentCompat;
-import androidx.core.view.GravityCompat;
 
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.View;
 import android.widget.GridLayout;
 import android.widget.ImageView;
 import android.widget.ScrollView;
 import android.widget.TextView;
-
-import org.w3c.dom.Text;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -26,8 +22,11 @@ public class MainActivity extends AppCompatActivity {
     private File currentDirectory = null;
     private ArrayList<File> previousDirectories = new ArrayList<>();
 
+    private final float SECTION_LABEL_FONT_SIZE = 32;
+    private final float PATH_FONT_SIZE = 16;
     private final float FILE_NAME_FONT_SIZE = 26;
     private final float FILE_DATA_FONT_SIZE = 13;
+    private final LinearLayoutCompat.LayoutParams PATH_LAYOUT_PARAMS = new LinearLayoutCompat.LayoutParams(LinearLayoutCompat.LayoutParams.WRAP_CONTENT, LinearLayoutCompat.LayoutParams.WRAP_CONTENT);
     private final LinearLayoutCompat.LayoutParams IMAGE_LAYOUT_PARAMS = new LinearLayoutCompat.LayoutParams(LinearLayoutCompat.LayoutParams.WRAP_CONTENT, LinearLayoutCompat.LayoutParams.WRAP_CONTENT);
     private final LinearLayoutCompat.LayoutParams FILE_DATA_LABEL_LAYOUT_PARAMS = new LinearLayoutCompat.LayoutParams(LinearLayoutCompat.LayoutParams.WRAP_CONTENT, LinearLayoutCompat.LayoutParams.WRAP_CONTENT);
     private final LinearLayoutCompat.LayoutParams FILE_DATA_LAYOUT_PARAMS = new LinearLayoutCompat.LayoutParams(LinearLayoutCompat.LayoutParams.WRAP_CONTENT, LinearLayoutCompat.LayoutParams.WRAP_CONTENT);
@@ -38,6 +37,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        PATH_LAYOUT_PARAMS.setMargins(10, 5, 10, 5);
         FILE_DATA_LABEL_LAYOUT_PARAMS.rightMargin = 32;
         IMAGE_LAYOUT_PARAMS.gravity = Gravity.CENTER_VERTICAL;
         IMAGE_LAYOUT_PARAMS.setMargins(5, 0, 10, 0);
@@ -45,8 +45,14 @@ public class MainActivity extends AppCompatActivity {
         displayUpdate();
     }
 
-    protected void displayUpdate(){
+    private void displayUpdate(){
         ScrollView scrvFileParent = findViewById(R.id.fileScrollViewParent);
+        scrvFileParent.removeAllViews();
+        scrvFileParent.scrollTo(0, 0);
+        LinearLayoutCompat lnvFileParent = new LinearLayoutCompat(this);
+        lnvFileParent.setOrientation(LinearLayoutCompat.VERTICAL);
+        lnvFileParent.addView(genPathScrollView());
+        scrvFileParent.addView(lnvFileParent);
 
         if(currentDirectory == null){
             Log.i("AppTest", Environment.getExternalStorageDirectory().getAbsolutePath());
@@ -58,6 +64,11 @@ public class MainActivity extends AppCompatActivity {
             GridLayout gridSpaceData = new GridLayout(this);
             gridSpaceData.setColumnCount(2);
             gridSpaceData.setRowCount(2);
+
+            TextView tvSectionStorageLabel = new TextView(this);
+            tvSectionStorageLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, SECTION_LABEL_FONT_SIZE);
+            tvSectionStorageLabel.setText(R.string.section_storage);
+            lnvFileParent.addView(tvSectionStorageLabel);
 
             ImageView ivIcon = new ImageView(this);
             ivIcon.setImageResource(R.drawable.place_holder_64x64);
@@ -90,8 +101,26 @@ public class MainActivity extends AppCompatActivity {
 
             lnvFileInfoContainer.addView(gridSpaceData, FILE_SPACE_CONTAINER_LAYOUT_PARAMS);
             lnvFileContainer.addView(lnvFileInfoContainer);
-            scrvFileParent.addView(lnvFileContainer);
+            lnvFileParent.addView(lnvFileContainer);
 
+        }
+    }
+
+    private ScrollView genPathScrollView(){
+        ScrollView scrvPath = new ScrollView(this);
+        LinearLayoutCompat lnvPath = new LinearLayoutCompat(this);
+        lnvPath.setOrientation(LinearLayoutCompat.HORIZONTAL);
+        if(currentDirectory == null){
+            TextView tvPath = new TextView(this);
+            tvPath.setTextSize(TypedValue.COMPLEX_UNIT_SP, PATH_FONT_SIZE);
+            tvPath.setText(R.string.path_home);
+            lnvPath.addView(tvPath, PATH_LAYOUT_PARAMS);
+            scrvPath.addView(lnvPath);
+            return scrvPath;
+        }
+        else{
+            //Loop through previous directory to create path scroll bar
+            return scrvPath;
         }
     }
 

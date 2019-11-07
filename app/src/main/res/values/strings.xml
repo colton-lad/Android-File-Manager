@@ -1,6 +1,8 @@
 <resources>
     <string name="app_name">File Manager</string>
-    <string name="on_board_storage">Device Storage</string>
+    <string name="section_storage">Storage</string>
+    <string name="path_home">Home</string>
+    <string name="on_board_storage">Device</string>
     <string name="total_space">Total Space</string>
     <string name="free_space">Free Space</string>
 </resources>
