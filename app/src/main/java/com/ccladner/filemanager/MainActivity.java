@@ -2,7 +2,11 @@ package com.ccladner.filemanager;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.LinearLayoutCompat;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
@@ -13,9 +17,12 @@ import android.widget.GridLayout;
 import android.widget.ImageView;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -32,8 +39,49 @@ public class MainActivity extends AppCompatActivity {
     private final LinearLayoutCompat.LayoutParams FILE_DATA_LAYOUT_PARAMS = new LinearLayoutCompat.LayoutParams(LinearLayoutCompat.LayoutParams.WRAP_CONTENT, LinearLayoutCompat.LayoutParams.WRAP_CONTENT);
     private final LinearLayoutCompat.LayoutParams FILE_SPACE_CONTAINER_LAYOUT_PARAMS = new LinearLayoutCompat.LayoutParams(LinearLayoutCompat.LayoutParams.MATCH_PARENT, LinearLayoutCompat.LayoutParams.MATCH_PARENT);
 
+    private final static int REQUEST_CODE_ASK_PERMISSIONS = 1;
+    private final static String[] REQUIRED_PERMISSIONS = new String[] {
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.READ_EXTERNAL_STORAGE
+    };
+
+    protected void checkPermissions(){
+        final List<String> missingPermissions = new ArrayList<>();
+        for (final String permission: REQUIRED_PERMISSIONS){
+            final int result = ContextCompat.checkSelfPermission(this, permission);
+            if(result != PackageManager.PERMISSION_GRANTED){
+                missingPermissions.add(permission);
+            }
+        }
+        if(!missingPermissions.isEmpty()){
+            final String[] permissions = missingPermissions.toArray(new String[missingPermissions.size()]);
+            ActivityCompat.requestPermissions(this, permissions, REQUEST_CODE_ASK_PERMISSIONS);
+        }
+        else{
+            final int[] grantResults = new int[REQUIRED_PERMISSIONS.length];
+            Arrays.fill(grantResults, PackageManager.PERMISSION_GRANTED);
+            onRequestPermissionsResult(REQUEST_CODE_ASK_PERMISSIONS, REQUIRED_PERMISSIONS, grantResults);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults){
+        switch(requestCode){
+            case REQUEST_CODE_ASK_PERMISSIONS:
+                for(int index = 0; index < permissions.length; index++){
+                    if(grantResults[index] != PackageManager.PERMISSION_GRANTED){
+                        Toast.makeText(this, "Required permission '" + permissions[index] + "' not granted, exiting app", Toast.LENGTH_LONG).show();
+                        finish();
+                        return;
+                    }
+                }
+                break;
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        checkPermissions();
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -46,16 +94,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void displayUpdate(){
-        ScrollView scrvFileParent = findViewById(R.id.fileScrollViewParent);
+        ScrollView scrvFileParent = findViewById(R.id.scrvFileParent);
+        genPathScrollView();
         scrvFileParent.removeAllViews();
         scrvFileParent.scrollTo(0, 0);
         LinearLayoutCompat lnvFileParent = new LinearLayoutCompat(this);
         lnvFileParent.setOrientation(LinearLayoutCompat.VERTICAL);
-        lnvFileParent.addView(genPathScrollView());
         scrvFileParent.addView(lnvFileParent);
 
         if(currentDirectory == null){
-            Log.i("AppTest", Environment.getExternalStorageDirectory().getAbsolutePath());
+            Log.i("AppTest Root", Environment.getExternalStorageDirectory().getAbsolutePath());
             File externalStorageRootDir = Environment.getExternalStorageDirectory();
 
             LinearLayoutCompat lnvFileContainer = new LinearLayoutCompat(this);
@@ -99,28 +147,94 @@ public class MainActivity extends AppCompatActivity {
             tvFreeSpace.setTextSize(TypedValue.COMPLEX_UNIT_SP, FILE_DATA_FONT_SIZE);
             gridSpaceData.addView(tvFreeSpace, FILE_DATA_LAYOUT_PARAMS);
 
+            lnvFileContainer.setOnClickListener(new HandleSelect(externalStorageRootDir));
+
             lnvFileInfoContainer.addView(gridSpaceData, FILE_SPACE_CONTAINER_LAYOUT_PARAMS);
             lnvFileContainer.addView(lnvFileInfoContainer);
             lnvFileParent.addView(lnvFileContainer);
-
+            return;
         }
+
+        Log.i("AppTest Dir", this.currentDirectory.getAbsolutePath());
+
+        for(File file : this.currentDirectory.listFiles()){
+            LinearLayoutCompat lnvFileContainer = new LinearLayoutCompat(this);
+            LinearLayoutCompat lnvFileInfoContainer = new LinearLayoutCompat(this);
+            lnvFileInfoContainer.setOrientation(LinearLayoutCompat.VERTICAL);
+            GridLayout gridSpaceData = new GridLayout(this);
+            gridSpaceData.setColumnCount(2);
+            gridSpaceData.setRowCount(2);
+
+            ImageView ivIcon = new ImageView(this);
+            ivIcon.setImageResource(R.drawable.place_holder_64x64);
+            lnvFileContainer.addView(ivIcon, IMAGE_LAYOUT_PARAMS);
+
+            TextView tvFileName = new TextView(this);
+            tvFileName.setText(file.getName());
+            tvFileName.setTextSize(TypedValue.COMPLEX_UNIT_SP, FILE_NAME_FONT_SIZE);
+            lnvFileInfoContainer.addView(tvFileName);
+
+            if(file.isDirectory()) {
+                TextView tvDirFileCountLabel = new TextView(this);
+                tvDirFileCountLabel.setText(R.string.dir_file_count);
+                tvDirFileCountLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, FILE_DATA_FONT_SIZE);
+                gridSpaceData.addView(tvDirFileCountLabel, FILE_DATA_LABEL_LAYOUT_PARAMS);
+
+                TextView tvDirFileCount = new TextView(this);
+                tvDirFileCount.setText(String.valueOf(file.listFiles().length));
+                tvDirFileCount.setTextSize(TypedValue.COMPLEX_UNIT_SP, FILE_DATA_FONT_SIZE);
+                gridSpaceData.addView(tvDirFileCount, FILE_DATA_LAYOUT_PARAMS);
+            }
+            else{
+                TextView tvFileSizeLabel = new TextView(this);
+                tvFileSizeLabel.setText(R.string.file_size);
+                tvFileSizeLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, FILE_DATA_FONT_SIZE);
+                gridSpaceData.addView(tvFileSizeLabel, FILE_DATA_LABEL_LAYOUT_PARAMS);
+
+                TextView tvFileSize = new TextView(this);
+                tvFileSize.setText(String.valueOf(file.length()));
+                tvFileSize.setTextSize(TypedValue.COMPLEX_UNIT_SP, FILE_DATA_FONT_SIZE);
+                gridSpaceData.addView(tvFileSize, FILE_DATA_LAYOUT_PARAMS);
+            }
+
+            lnvFileContainer.setOnClickListener(new HandleSelect(file));
+
+            lnvFileInfoContainer.addView(gridSpaceData, FILE_SPACE_CONTAINER_LAYOUT_PARAMS);
+            lnvFileContainer.addView(lnvFileInfoContainer);
+            lnvFileParent.addView(lnvFileContainer);
+        }
+
     }
 
-    private ScrollView genPathScrollView(){
-        ScrollView scrvPath = new ScrollView(this);
+    private void genPathScrollView(){
+        ScrollView scrvPath = findViewById(R.id.scrvPath);
+        scrvPath.removeAllViews();
         LinearLayoutCompat lnvPath = new LinearLayoutCompat(this);
         lnvPath.setOrientation(LinearLayoutCompat.HORIZONTAL);
-        if(currentDirectory == null){
+        if(this.currentDirectory == null){
             TextView tvPath = new TextView(this);
             tvPath.setTextSize(TypedValue.COMPLEX_UNIT_SP, PATH_FONT_SIZE);
             tvPath.setText(R.string.path_home);
             lnvPath.addView(tvPath, PATH_LAYOUT_PARAMS);
             scrvPath.addView(lnvPath);
-            return scrvPath;
         }
         else{
-            //Loop through previous directory to create path scroll bar
-            return scrvPath;
+            //Loop through previous directories to create path
+        }
+    }
+
+    private class HandleSelect implements View.OnClickListener{
+        private File selectedFile;
+
+        HandleSelect(File selectedFile){
+            this.selectedFile = selectedFile;
+        }
+
+        @Override
+        public void onClick(View view) {
+            MainActivity.this.previousDirectories.add(MainActivity.this.currentDirectory);
+            MainActivity.this.currentDirectory = this.selectedFile;
+            displayUpdate();
         }
     }
 

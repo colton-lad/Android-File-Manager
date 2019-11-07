@@ -5,4 +5,6 @@
     <string name="on_board_storage">Device</string>
     <string name="total_space">Total Space</string>
     <string name="free_space">Free Space</string>
+    <string name="dir_file_count">Items</string>
+    <string name="file_size">Size</string>
 </resources>
